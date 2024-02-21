@@ -1,10 +1,19 @@
 package controller;
 
+import dao.DOMImpl;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import dao.DaoImpl;
+import dao.JAXBImpl;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.PropertyException;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import model.Card;
 import model.Player;
 import utils.Color;
@@ -24,6 +33,7 @@ public class Controller {
 	private ArrayList<Card> cards;
 	private Scanner s;
 	private Card lastCard;
+        private DOMImpl domImpl;
 
 	private Controller () {
 		dao = new DaoImpl();
@@ -44,7 +54,7 @@ public class Controller {
 	 * check user/pw
 	 * play a card
 	 */
-	public void init() {
+	public void init() throws ParserConfigurationException, IOException, TransformerException, JAXBException {
 		try {
 			// connect to data
 			dao.connect();
@@ -77,7 +87,7 @@ public class Controller {
 	 * Ask for player action
 	 * @throws SQLException
 	 */
-	private void playTurn() throws SQLException {
+	private void playTurn() throws SQLException, ParserConfigurationException, IOException, TransformerException, JAXBException {
 		Card card = null;
 		boolean correctCard= false;
 		boolean end=false;
@@ -89,6 +99,7 @@ public class Controller {
 				showCards();				
 				System.out.println("Press -1 to take a new one.");
 				System.out.println("Press -2 to exit game.");
+                                System.out.println("Press -3 for RECU");
 				int position=0;
 				do {
 					System.out.println("Select card to play.");
@@ -102,13 +113,25 @@ public class Controller {
                                     //AQUÍ EMPIEZA MI RECUPERACIÓN
                                 case -3:
                                     recuperationMenu();
-                                    do {
-                                        
-                                        if(!choseSecondMenuOption().equals("D") || !choseSecondMenuOption().equals("J")){
-                                            System.out.print("La opción es incorrecta!");
+                                    String opcionMenu;
+                                    opcionMenu = choseSecondMenuOption();
+                                    
+                                    while(!opcionMenu.equals("-D") && !opcionMenu.equals("-J") && !opcionMenu.equals("-F")){
+                                        if(opcionMenu.equals("-D") || opcionMenu.equals("-J") || opcionMenu.equals("-F")){
+                                            break;
+                                        }else{
+                                            System.out.println("Opción incorrecta!");
                                         }
-                                    }while(!choseSecondMenuOption().equals("D") || !choseSecondMenuOption().equals("J"));
+                                        opcionMenu = choseSecondMenuOption();
+                                    }
                                     //Aqui pondremos lo que va a continua
+                                    boolean valueFunction = metodoRecu(opcionMenu);
+                                    if(valueFunction){
+                                        System.out.println("Archivo generado correctamente");
+                                    }else{
+                                        System.out.println("No se ha podido generar el archivo correctamente");
+                                    }
+                                    
                                     break;
 				case -2:
 					correctCard = true;
@@ -281,18 +304,76 @@ public class Controller {
 	}
         
         public void recuperationMenu(){
-            System.out.println("- D) option DOM --> Save player in XML with DOM\n"
-                            + "- J) option JAXB --> Save player in XML with JAXB");
+            System.out.println("Press -F Option File --> Save player in txt with FileWriter\nPres -D option DOM --> Save player in XML with DOM\n"
+                            + "Press -J option JAXB --> Save player in XML with JAXB");
         }
         
         public String choseSecondMenuOption(){
-            System.out.print("Introduzca la opción");
-            String pos = s.nextLine();
+            Scanner scan = new Scanner(System.in);
+            System.out.println("Introduzca la opción");
+            String pos = scan.nextLine();
             return pos;
         }
         
-        public void metodoRecu(String opcion){
+        public boolean metodoRecu(String opcion) throws ParserConfigurationException, IOException, TransformerException, JAXBException, SQLException{
+            boolean valueFunction = false;
+            switch (opcion){
+                case "-F":
+                    valueFunction = File();
+                    //Crear una
+                    break;
+                case "-D":
+                    valueFunction = DOMmethod();
+                    break;
+                case "-J":
+                    valueFunction = JAXBmethod();
+                    break;
+            }
             
+            return valueFunction;
+        }
+        
+        public boolean DOMmethod() throws ParserConfigurationException, IOException, TransformerException{
+            domImpl = new DOMImpl();
+            ArrayList<String[]> array = dao.returnValuesPropertiesPlayer();
+            for(String[] s: array){
+                domImpl.generateXML(s);
+            }
+            domImpl.writeXML();
+            return true;
+        }
+        
+        public boolean JAXBmethod() throws JAXBException, SQLException, PropertyException, IOException{
+            ArrayList<Player> players = dao.getListPlayers();
+            JAXBImpl jaxb = new JAXBImpl();
+            jaxb.marshaller();
+            jaxb.createXML(players);
+            return true;
+        }
+        
+        public boolean File() throws IOException{
+            File file = new File("PlayersFile.txt");
+            FileWriter fw;
+            ArrayList<Player> jugadores = dao.getListPlayers();
+            if (file.createNewFile()){
+                System.out.println("Archivo creado: " + file.getName());
+            }else{
+                System.out.println("El archivo ya existe");
+            }
+            
+            try{
+                fw = new FileWriter(file);
+                fw.write("idPlayer\tnameUser\tpasswordUser\tnamePlayer\tgames\tvictories\n");
+                for(Player i: jugadores){
+                    fw.write(i.getId() + "\t\t" + i.getUsername() + "\t\t" + i.getPassword() 
+                            + "\t\t" + i.getName() + "\t\t" + i.getGames() + "\t" + i.getVictories() + "\n");
+                }
+                fw.close();
+                return true;
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            return false;
         }
 
 

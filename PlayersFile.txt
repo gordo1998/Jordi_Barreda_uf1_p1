@@ -1,0 +1,4 @@
+idPlayer	nameUser	passwordUser	namePlayer	games	victories
+1		gordo		gordo		jordi		2	3
+2		tete		tete		alex		4	4
+3		aaron		aron		aron		0	0

@@ -242,14 +242,31 @@ public class DaoImpl implements Dao{
             PreparedStatement consult = this.conn.prepareStatement(Constants.SFINDALLPLAYERS);
             ResultSet result = consult.executeQuery();
             while(result.next()){
-                String[] s = {result.getString(2),result.getString(3), 
+                String[] s = {String.valueOf(result.getInt(1))  ,
+                            result.getString(2),result.getString(3), 
                             result.getString(4), result.getString(5),
                             result.getString(6)};
                 a.add(s);
             }
             return a;
         }catch(Exception e){
-            
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    public ArrayList<Player> getListPlayers(){
+        ArrayList<Player> players = new ArrayList<>();
+        try{
+            PreparedStatement consult = this.conn.prepareStatement(Constants.SFINDALLPLAYERS);
+            ResultSet result = consult.executeQuery();
+            while(result.next()){
+                players.add(new Player(result.getInt("idPlayer"), result.getString("nameUser"), result.getString("passwordUser"),
+                            result.getString("namePlayer"), result.getInt("games"), result.getInt("victories")));
+            }
+            return players;
+        }catch(Exception e){
+            e.printStackTrace();
         }
         return null;
     }
